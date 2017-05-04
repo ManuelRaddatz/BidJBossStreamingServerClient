@@ -1,0 +1,25 @@
+syntax = "proto3";
+package grpc.service;
+
+option java_package = "org.cpm42.protobuf3.generated";
+option java_outer_classname = "VideoStreamProtoBuffer";
+option java_multiple_files = true;
+
+enum StreamState {
+	START = 0;
+	STOP = 1;
+	OK = 2;
+	NOK = 3;
+}
+
+message StreamRequest {
+	StreamState streamState = 1;
+}
+
+message StreamResponse {
+	string imageData = 1;
+}
+
+service StreamImageData {
+	rpc streamImagaData (stream StreamRequest) returns ( stream StreamResponse){}
+}

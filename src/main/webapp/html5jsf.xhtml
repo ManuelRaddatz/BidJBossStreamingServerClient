@@ -1,0 +1,108 @@
+<!DOCTYPE html> 
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:h5="http://java.sun.com/jsf/composite/media"> 
+      
+
+<h:head>
+	<title>WebSocketTest</title>
+</h:head> 
+<body onload="javascript:subscribeToWebSocket()"> 
+<h2>MicroService Create-Model</h2>
+<h:form id="form">
+<p:growl id="msg" showDetail="true"/>
+<p:tabView id="tabView">
+	<p:tab id="original" title="Original">
+		<h:panelGrid columns="2" cellpadding="10" cellspacing="5">
+		<p:outputLabel value="WebSocket-Status:"/><h:outputText id="output2"/>
+		<p:outputLabel value="Original-Stream:"/>
+		<h:commandButton actionListener="#{testController.startStream()}" value="Start">
+			<f:ajax execute="@form" render="newImage"/>	
+		</h:commandButton>
+		<p:outputLabel value="Original Video"/><canvas title="Original" id="newImage" height="144" width="176" />
+	</h:panelGrid>
+	</p:tab>
+	<p:tab id="colorTyp" title="Color CvType">
+		<h:panelGrid columns="2" cellpadding="10" cellspacing="5">
+			<p:outputLabel for="colorTyps" value="Farbtyp:"/>
+			<p:selectOneRadio id="colorTyps" layout="grid" columns="1">
+				<f:selectItem itemLabel="CV_8UC1 unsigned int 8bit 1 channel (0...255)" itemValue="CV_8UC1" />
+				<f:selectItem itemLabel="CV_8UC2 unsigned int 8bit 2 channel(0...255)" itemValue="CV_8UC2" />
+				<f:selectItem itemLabel="CV_8UC3 unsigned int 8bit 3 channel(0...255)" itemValue="CV_8UC3" />
+			</p:selectOneRadio>
+		</h:panelGrid>
+	</p:tab>
+	<p:tab id="filter" title="Smoothing - Glätten">
+		<h:panelGrid columns="2" cellpadding="10" cellspacing="5">
+			<p:outputLabel for="filterGroup" value="Filterauswahl"/>
+			<p:selectOneRadio id="filterGroup" value="#{testController.filter}" valueChangeListener="#{testController.filterValueChangeListener}" onchange="submit()">
+				<f:selectItem itemLabel="None" itemValue="none"/>
+				<f:selectItem itemLabel="Blur" itemValue="blur"/>
+				<f:selectItem itemLabel="Bilateral" itemValue="bilateral" />
+				<f:selectItem itemLabel="Gaussian" itemValue="gaussian"/>
+				<f:selectItem itemLabel="Median" itemValue="media"/>			
+			</p:selectOneRadio>
+		</h:panelGrid>
+	</p:tab>	
+</p:tabView>
+</h:form>
+<script>
+//<![CDATA[
+	var socket;
+
+    function showMessage(text) {
+      document.getElementById('output').innerHTML = text;
+      document.getElementById('form:tabView:output2').innerHTML = text;
+    }
+    
+    function subscribeToWebSocket(){
+      if('WebSocket' in window){
+        socket = new WebSocket('ws://localhost:8080/imageStream');
+        socket.binaryType = 'arraybuffer';
+        socket.onopen = function(){
+          showMessage('Connected to WebSocket.');
+        };
+        socket.onmessage = function(msg){   
+        	if(msg.data instanceof ArrayBuffer) {
+            	console.log('binaryData');
+            	drawImageBinary(msg.data);
+        	}else{
+            	var canvas = document.getElementById("newImage");
+            	var ctx = canvas.getContext("2d");
+        		var baseStr64=msg.data;
+        		var image = new Image();
+        		image.src = "data:image/png;base64,"+baseStr64;
+        		image.onload = function(){
+					ctx.drawImage(image, 0, 0);
+                };
+                
+            }
+        };
+        socket.onerror = function(msg){
+          showMessage('Sorry but there was an error.');
+        };
+        socket.onclose = function(){
+          showMessage('Server offline.');
+        };
+      }else{
+        showMessage('Your browser does not support WebSockets.');
+      }
+    }
+
+    function drawImageBinary(blob) {
+    	var canvas = document.getElementById("newImage");
+    	var context = canvas.getContext("2d");
+        var bytes = new Uint8Array(blob);       
+        var imageData = context.createImageData(canvas.width, canvas.height);
+        for (var i=0; i<bytes.length; i++) {
+            imageData.data[i] = bytes[i];
+        }
+        context.drawImage(imageData, 0, 0);
+    }
+  //]]>
+  </script>
+</body> 
+</html>
